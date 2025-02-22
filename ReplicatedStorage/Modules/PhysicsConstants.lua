@@ -6,214 +6,158 @@ local PhysicsConstants = {
     ZERO_GRAVITY_THRESHOLD = 1000,
     GRAVITY_FALLOFF_RATE = 2,
     MIN_GRAVITY = 0.001,
-    SYSTEM_SCALE = 1, -- Now using direct stud measurements
+    SYSTEM_SCALE = 1, -- Using direct stud measurements
 
-    -- KSP1 Solar System
+    -- Kerbol System (Star)
     KERBOL = {
         MASS = 1.7565459e28 * 1e-9,
-        RADIUS = 2048, -- Base size in studs (2048x2 for full width)
+        RADIUS = 2000,  -- Base size in studs
         SURFACE_GRAVITY = 17.1,
         ORBIT_RADIUS = 0,
-        GRAVITY_RANGE = 4096
+        GRAVITY_RANGE = 4000
     },
 
-    -- KSP1 Inner Planets
+    -- Inner Planets
     MOHO = {
         MASS = 2.5263314e21 * 1e-9,
-        RADIUS = 128, -- Scaled relative to Kerbol
+        RADIUS = 250,
         SURFACE_GRAVITY = 2.70,
-        ORBIT_RADIUS = 26000,
-        GRAVITY_RANGE = 256
+        ORBIT_RADIUS = 13000,
+        GRAVITY_RANGE = 500
     },
 
     EVE = {
         MASS = 1.2243980e23 * 1e-9,
-        RADIUS = 350,
+        RADIUS = 700,
         SURFACE_GRAVITY = 16.7,
         ATMOSPHERE_HEIGHT = 90,
-        ORBIT_RADIUS = 45000,
-        GRAVITY_RANGE = 700
+        ORBIT_RADIUS = 23000,
+        GRAVITY_RANGE = 1400
     },
 
     GILLY = {
         MASS = 1.2420512e17 * 1e-9,
-        RADIUS = 6.5,
+        RADIUS = 65,
         SURFACE_GRAVITY = 0.049,
         ORBIT_RADIUS = 315,
         PARENT = "EVE",
-        GRAVITY_RANGE = 13
+        GRAVITY_RANGE = 130
     },
 
     KERBIN = {
         MASS = 5.2915793e22 * 1e-9,
-        RADIUS = 300,
+        RADIUS = 600,
         ATMOSPHERE_HEIGHT = 70,
         SURFACE_GRAVITY = 9.81,
-        ORBIT_RADIUS = 68000,
-        GRAVITY_RANGE = 600
+        ORBIT_RADIUS = 34000,
+        GRAVITY_RANGE = 1200
     },
 
     MUN = {
         MASS = 9.7599066e20 * 1e-9,
-        RADIUS = 100,
+        RADIUS = 200,
         SURFACE_GRAVITY = 1.63,
         ORBIT_RADIUS = 1200,
         PARENT = "KERBIN",
-        GRAVITY_RANGE = 200
+        GRAVITY_RANGE = 400
     },
 
     MINMUS = {
         MASS = 2.6457580e19 * 1e-9,
-        RADIUS = 30,
+        RADIUS = 60,
         SURFACE_GRAVITY = 0.491,
-        ORBIT_RADIUS = 4700,
+        ORBIT_RADIUS = 2400,
         PARENT = "KERBIN",
-        GRAVITY_RANGE = 60
+        GRAVITY_RANGE = 120
     },
 
     DUNA = {
         MASS = 4.5154812e21 * 1e-9,
-        RADIUS = 160,
+        RADIUS = 320,
         SURFACE_GRAVITY = 2.94,
         ATMOSPHERE_HEIGHT = 50,
-        ORBIT_RADIUS = 103000,
-        GRAVITY_RANGE = 320
+        ORBIT_RADIUS = 52000,
+        GRAVITY_RANGE = 640
     },
 
     IKE = {
         MASS = 2.7821949e20 * 1e-9,
-        RADIUS = 65,
+        RADIUS = 130,
         SURFACE_GRAVITY = 1.10,
         ORBIT_RADIUS = 320,
         PARENT = "DUNA",
-        GRAVITY_RANGE = 130
+        GRAVITY_RANGE = 260
     },
 
     DRES = {
         MASS = 3.2191322e20 * 1e-9,
-        RADIUS = 69,
+        RADIUS = 138,
         SURFACE_GRAVITY = 1.13,
-        ORBIT_RADIUS = 204000,
-        GRAVITY_RANGE = 138
+        ORBIT_RADIUS = 102000,
+        GRAVITY_RANGE = 276
     },
 
     JOOL = {
         MASS = 4.2332127e24 * 1e-9,
-        RADIUS = 600,
+        RADIUS = 1200,
         SURFACE_GRAVITY = 7.85,
         ATMOSPHERE_HEIGHT = 200,
-        ORBIT_RADIUS = 343000,
-        GRAVITY_RANGE = 1200
+        ORBIT_RADIUS = 172000,
+        GRAVITY_RANGE = 2400
     },
 
     LAYTHE = {
         MASS = 2.9397311e22 * 1e-9,
-        RADIUS = 250,
+        RADIUS = 500,
         SURFACE_GRAVITY = 7.85,
         ATMOSPHERE_HEIGHT = 50,
-        ORBIT_RADIUS = 2718,
+        ORBIT_RADIUS = 1360,
         PARENT = "JOOL",
-        GRAVITY_RANGE = 500
+        GRAVITY_RANGE = 1000
     },
 
     VALL = {
         MASS = 3.1088028e21 * 1e-9,
-        RADIUS = 150,
-        SURFACE_GRAVITY = 2.31,
-        ORBIT_RADIUS = 4315,
-        PARENT = "JOOL",
-        GRAVITY_RANGE = 300
-    },
-
-    TYLO = {
-        MASS = 4.2332127e22 * 1e-9,
         RADIUS = 300,
-        SURFACE_GRAVITY = 7.85,
-        ORBIT_RADIUS = 6850,
+        SURFACE_GRAVITY = 2.31,
+        ORBIT_RADIUS = 2160,
         PARENT = "JOOL",
         GRAVITY_RANGE = 600
     },
 
+    TYLO = {
+        MASS = 4.2332127e22 * 1e-9,
+        RADIUS = 600,
+        SURFACE_GRAVITY = 7.85,
+        ORBIT_RADIUS = 3425,
+        PARENT = "JOOL",
+        GRAVITY_RANGE = 1200
+    },
+
     BOP = {
         MASS = 3.7261536e19 * 1e-9,
-        RADIUS = 32.5,
+        RADIUS = 65,
         SURFACE_GRAVITY = 0.589,
-        ORBIT_RADIUS = 12850,
+        ORBIT_RADIUS = 6425,
         PARENT = "JOOL",
-        GRAVITY_RANGE = 65
+        GRAVITY_RANGE = 130
     },
 
     POL = {
         MASS = 1.0813636e19 * 1e-9,
-        RADIUS = 22,
+        RADIUS = 44,
         SURFACE_GRAVITY = 0.373,
-        ORBIT_RADIUS = 17989,
+        ORBIT_RADIUS = 9000,
         PARENT = "JOOL",
-        GRAVITY_RANGE = 44
+        GRAVITY_RANGE = 88
     },
 
     EELOO = {
         MASS = 1.1149224e21 * 1e-9,
-        RADIUS = 105,
+        RADIUS = 210,
         SURFACE_GRAVITY = 1.69,
-        ORBIT_RADIUS = 450500,
-        GRAVITY_RANGE = 210
-    },
-
-    -- KSP2 New Star Systems
-    CIRO = { -- KSP2's version of the Sun
-        MASS = 1.7565459e28 * 1e-9,
-        RADIUS = 2048,
-        SURFACE_GRAVITY = 17.1,
-        ORBIT_RADIUS = 0,
-        GRAVITY_RANGE = 4096
-    },
-
-    -- Gargantuan System
-    GARGANTUA = { -- Binary partner of Ciro
-        MASS = 2.1956824e28 * 1e-9,
-        RADIUS = 2350,
-        SURFACE_GRAVITY = 19.5,
-        ORBIT_RADIUS = 750000,
-        GRAVITY_RANGE = 4700
-    },
-
-    GLUMO = {
-        MASS = 8.4664254e22 * 1e-9,
-        RADIUS = 400,
-        SURFACE_GRAVITY = 8.8,
-        ATMOSPHERE_HEIGHT = 80,
-        ORBIT_RADIUS = 60000,
-        PARENT = "GARGANTUA",
-        GRAVITY_RANGE = 800
-    },
-
-    -- Ovin System
-    OVIN = {
-        MASS = 3.9152283e23 * 1e-9,
-        RADIUS = 600,
-        SURFACE_GRAVITY = 18.2,
-        ATMOSPHERE_HEIGHT = 150,
-        ORBIT_RADIUS = 400000,
-        GRAVITY_RANGE = 1200
-    },
-
-    MAYOR = {
-        MASS = 1.2420512e21 * 1e-9,
-        RADIUS = 125,
-        SURFACE_GRAVITY = 1.3,
-        ORBIT_RADIUS = 500,
-        PARENT = "OVIN",
-        GRAVITY_RANGE = 250
-    },
-
-    REGENT = {
-        MASS = 8.9427686e20 * 1e-9,
-        RADIUS = 90,
-        SURFACE_GRAVITY = 1.8,
-        ORBIT_RADIUS = 800,
-        PARENT = "OVIN",
-        GRAVITY_RANGE = 180
+        ORBIT_RADIUS = 225250,
+        GRAVITY_RANGE = 420
     },
 
     -- Part specifications

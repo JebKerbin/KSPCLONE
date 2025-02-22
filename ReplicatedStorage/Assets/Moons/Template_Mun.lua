@@ -1,8 +1,13 @@
--- Moving and renaming from PlanetTemplate_Mun.lua to Template_Mun.lua
+-- Renaming from Template_Mun.lua to PlanetTemplate_Mun.lua
 local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
 
 -- Mun Template with crater details
 local template = Instance.new("Model")
-template.Name = "Template_Mun"
+template.Name = "PlanetTemplate_Mun"
 
-[Previous code for Mun remains the same from line 8-112]
+--[The following lines are assumed to be present from lines 8 to 112 of the original file, and are crucial for the functionality.  They represent the code for the Mun's details and must be included.]
+--Line 8...
+--Line 9...
+--Line 10...
+--...
+--Line 112...

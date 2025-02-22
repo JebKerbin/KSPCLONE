@@ -2,7 +2,7 @@ local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants
 
 -- Gilly Template - Tiny Irregular Moon of Eve
 local template = Instance.new("Model")
-template.Name = "Template_Gilly"
+template.Name = "PlanetTemplate_Gilly"
 
 -- Core part (irregular shape)
 local primaryPart = Instance.new("Part")
@@ -35,7 +35,6 @@ local features = {
     }
 }
 
--- Create surface features
 for _, feature in ipairs(features) do
     local part = Instance.new("Part")
     part.Name = feature.name
@@ -62,7 +61,6 @@ local craters = {
     }
 }
 
--- Create crater pieces
 for _, crater in ipairs(craters) do
     local part = Instance.new("Part")
     part.Name = crater.name

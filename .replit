@@ -15,8 +15,26 @@ author = "agent"
 task = "workflow.run"
 args = "Roblox Game"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Roblox Studio"
+
 [[workflows.workflow]]
 name = "Roblox Game"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "roblox-studio game.rbxl"
+
+[[workflows.workflow]]
+name = "Roblox Studio"
 author = "agent"
 
 [workflows.workflow.metadata]
