@@ -1,0 +1,88 @@
+You are an expert game developer specializing in Roblox Lua and physics simulations. You are tasked with creating a Kerbal Space Program (KSP) inspired game within Roblox, featuring a simplified but functional orbital mechanics system based on pre-made 8-piece quarter-circle planets.
+
+**Core Mechanics and Specifications:**
+
+1.  **Pre-made Planetary System:**
+    * The planetary system consists of three celestial bodies: Kerbin, Mun, and Minmus, already constructed from 8 quarter-circle parts and present in the workspace.
+    * **Kerbin:**
+        * Mass: 5.2915793e+22 kg (scaled appropriately for Roblox physics).
+        * Atmosphere: Implement a simple atmospheric drag model, mimicking Kerbin's atmosphere.
+        * Surface Gravity: 9.81 m/s² (scaled to Roblox's gravity).
+    * **Mun:**
+        * Mass: 9.759896e+20 kg (scaled appropriately for Roblox physics).
+        * Orbit Kerbin at a scaled distance and period.
+        * Surface Gravity: 1.63 m/s² (scaled to Roblox's gravity).
+        * No atmosphere.
+    * **Minmus:**
+        * Mass: 2.6567705e+19 kg (scaled appropriately for Roblox physics).
+        * Orbit Kerbin at a scaled distance and period, with an inclined orbit.
+        * Surface Gravity: 0.491 m/s² (scaled to Roblox's gravity).
+        * No atmosphere.
+    * The planets are already fully constructed and positioned in the workspace. You must find their positions and sizes within the workspace at game start.
+    * Scale planetary distances and orbital periods proportionally to fit within Roblox's physics engine limitations. Maintain relative ratios from KSP.
+    * Use Roblox's `Vector3` for position and velocity calculations.
+
+2.  **Spacecraft and Parts:**
+    * Implement a basic rocket construction system using Roblox parts.
+    * Include at least the following stock KSP-inspired parts:
+        * **Rockomax Fuel Tank:** Stores liquid fuel.
+        * **LV-T30 "Reliant" Liquid Fuel Engine:** Provides thrust.
+        * **Mk1 Command Pod:** Houses the Kerbal.
+        * **FL-T100 Fuel Tank:** smaller fuel tank.
+        * **AV-R8 Winglet:** control surface.
+        * **SAS Module:** Stability Augmentation System.
+    * Assign realistic mass and thrust values to parts, scaled down for Roblox.
+    * Implement fuel consumption and thrust calculations.
+    * Implement part connection using weld constraints.
+
+3.  **Kerbals:**
+    * Create Kerbal characters (e.g., Jebediah Kerman, Bill Kerman, Bob Kerman) as Roblox characters.
+    * Implement basic EVA (Extravehicular Activity) functionality.
+    * Kerbals must be able to enter and exit command pods.
+
+4.  **Orbital Mechanics:**
+    * Implement a simplified orbital mechanics system using Keplerian elements or a similar approximation.
+    * Calculate orbital trajectories based on spacecraft velocity and planetary gravity.
+    * Display orbital paths visually using `Part` objects or `Beam` objects.
+    * Implement Apoapsis and Periapsis calculation and display.
+
+5.  **Controls:**
+    * Use the following keybinds, matching KSP:
+        * **W/S:** Throttle up/down.
+        * **A/D:** Yaw left/right.
+        * **Q/E:** Roll left/right.
+        * **Shift/Ctrl:** Full throttle/zero throttle.
+        * **T:** Toggle SAS.
+        * **Space:** Stage.
+    * Implement a staging system to detach parts.
+
+6.  **User Interface (UI):**
+    * Display essential information:
+        * Altitude.
+        * Velocity (surface and orbital).
+        * Apoapsis and Periapsis.
+        * Fuel levels.
+        * SAS status.
+    * Create a map view showing planetary orbits and spacecraft trajectory.
+
+7.  **Physics Considerations:**
+    * Use Roblox's `BodyForce`, `BodyVelocity`, and `BodyAngularVelocity` for physics calculations.
+    * Optimize physics calculations to prevent performance issues.
+    * Scale down values to prevent extreme accelerations.
+
+**Specific Implementation Details:**
+
+* Use Roblox's `RunService` to update physics and calculations every frame.
+* Employ object-oriented programming to structure the code.
+* Use `RemoteEvents` and `RemoteFunctions` for communication between client and server, if needed.
+* Use `UserInputService` to handle player input.
+* When calculating gravity, use a G constant that makes the scale of the game playable.
+* When creating the map view, create a scaled down version of the solar system, and use a camera to show the orbits from a top down view.
+* Create a function that calculates the force of gravity based on the mass of two objects, and the distance between them.
+* **Crucially:** At game start, scan the workspace to locate the pre-made Kerbin, Mun, and Minmus parts. Store their positions and sizes (derived from their bounding boxes) in variables for use in orbital calculations and gravity simulations.
+
+**Deliverables:**
+
+* A Roblox place file containing the game with all specified features.
+* Well-documented Lua scripts.
+* A brief explanation of how to use the game.
