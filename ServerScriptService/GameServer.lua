@@ -2,10 +2,14 @@ local PhysicsService = game:GetService("PhysicsService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+print("[GameServer] Loading required modules...")
+
 local OrbitalMechanics = require(game.ReplicatedStorage.Modules.OrbitalMechanics)
 local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
 local SpacecraftSystem = require(game.ReplicatedStorage.Modules.SpacecraftSystem)
 local PlanetTemplateGenerator = require(game.ReplicatedStorage.Assets.Planets.PlanetTemplateGenerator)
+
+print("[GameServer] Creating RemoteEvents...")
 
 -- Create RemoteEvents for spacecraft control
 local Events = {
@@ -18,6 +22,7 @@ local Events = {
 for name, event in pairs(Events) do
     event.Name = name
     event.Parent = ReplicatedStorage
+    print(string.format("[GameServer] Created RemoteEvent: %s", name))
 end
 
 local _GameServer = {
@@ -27,6 +32,8 @@ local _GameServer = {
 
 -- Update findCelestialBodies to handle all planets and moons
 local function findCelestialBodies()
+    print("[GameServer] Starting celestial body creation...")
+
     local bodies = {}
     local planetFolder = Instance.new("Folder")
     planetFolder.Name = "CelestialBodies"
@@ -39,10 +46,8 @@ local function findCelestialBodies()
         "BOP", "POL", "EELOO", "OVIN", "GARGANTUA", "GLUMO"
     }
 
-    print("[GameServer] Starting celestial body creation")
-
     for _, bodyName in ipairs(celestialBodies) do
-        print("[GameServer] Creating", bodyName)
+        print(string.format("[GameServer] Creating %s...", bodyName))
         local planet = PlanetTemplateGenerator.createTemplate(bodyName)
         planet.Name = bodyName
         planet.Parent = planetFolder
@@ -57,25 +62,30 @@ local function findCelestialBodies()
             bodyName, tostring(planet.PrimaryPart.Position)))
     end
 
+    print("[GameServer] Celestial body creation complete")
     return bodies
 end
 
 function _GameServer:Initialize()
     print("[GameServer] Starting initialization...")
+
+    -- Initialize celestial bodies
     self.celestialBodies = findCelestialBodies()
 
     -- Create test spacecraft
+    print("[GameServer] Creating test command pod...")
     local commandPod = Instance.new("Part")
     commandPod.Name = "CommandPod"
     commandPod.Position = Vector3.new(0, PhysicsConstants.KERBIN.RADIUS + 100, 0) -- Start 100 studs above Kerbin
     commandPod.Size = Vector3.new(2, 3, 2)
     commandPod.Anchored = false
     commandPod.Parent = game.Workspace
-    print("[GameServer] Created test command pod at height:", commandPod.Position.Y)
+    print(string.format("[GameServer] Created test command pod at height: %d", commandPod.Position.Y))
 
     -- Set up event handlers
+    print("[GameServer] Setting up event handlers...")
     Events.UpdateThrottle.OnServerEvent:Connect(function(player, throttle)
-        print("[GameServer] Received throttle update from", player.Name, ":", throttle)
+        print(string.format("[GameServer] Received throttle update from %s: %f", player.Name, throttle))
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft:applyThrust(throttle)
@@ -83,7 +93,7 @@ function _GameServer:Initialize()
     end)
 
     Events.UpdateRotation.OnServerEvent:Connect(function(player, rotation)
-        print("[GameServer] Received rotation update from", player.Name, ":", rotation)
+        print(string.format("[GameServer] Received rotation update from %s: %s", player.Name, rotation))
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft:applyRotation(rotation)
@@ -91,7 +101,7 @@ function _GameServer:Initialize()
     end)
 
     Events.ToggleSAS.OnServerEvent:Connect(function(player)
-        print("[GameServer] Received SAS toggle from", player.Name)
+        print(string.format("[GameServer] Received SAS toggle from %s", player.Name))
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft.sasEnabled = not spacecraft.sasEnabled
@@ -99,7 +109,7 @@ function _GameServer:Initialize()
     end)
 
     Events.Stage.OnServerEvent:Connect(function(player)
-        print("[GameServer] Received stage command from", player.Name)
+        print(string.format("[GameServer] Received stage command from %s", player.Name))
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft:stage()
@@ -107,6 +117,7 @@ function _GameServer:Initialize()
     end)
 
     -- Start physics update loop
+    print("[GameServer] Starting physics update loop...")
     RunService.Heartbeat:Connect(function(dt)
         self:UpdatePhysics(dt)
     end)
@@ -145,7 +156,7 @@ function _GameServer:UpdatePhysics(dt)
 end
 
 function _GameServer:RegisterSpacecraft(spacecraft, player)
-    print("[GameServer] Registering spacecraft for player:", player.Name)
+    print(string.format("[GameServer] Registering spacecraft for player: %s", player.Name))
     self.activeSpacecraft[player.UserId] = spacecraft
 
     -- Create engine force
@@ -155,4 +166,6 @@ function _GameServer:RegisterSpacecraft(spacecraft, player)
 end
 
 -- Initialize the game server immediately
+print("[GameServer] Starting GameServer initialization...")
 _GameServer:Initialize()
+print("[GameServer] GameServer initialization completed")

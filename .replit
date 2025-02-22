@@ -1,4 +1,4 @@
-modules = ["roblox"]
+modules = ["roblox", "python-3.11"]
 
 [nix]
 channel = "stable-24_05"

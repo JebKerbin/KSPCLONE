@@ -1,4 +1,5 @@
 local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
+local OrbitalMotion = require(game.ReplicatedStorage.Modules.OrbitalMotion)
 
 local PlanetTemplateGenerator = {}
 
@@ -89,7 +90,6 @@ local PLANET_PROPERTIES = {
         MATERIAL = Enum.Material.Ice,
         PARENT = "KERBOL"
     },
-    -- KSP2 Additions
     OVIN = {
         COLOR = "Sand red",
         MATERIAL = Enum.Material.Rock,
@@ -111,14 +111,14 @@ local PLANET_PROPERTIES = {
 local function getRelativePosition(bodyName)
     local props = PLANET_PROPERTIES[bodyName]
     local parent = props.PARENT
-    
+
     if not parent then
         return Vector3.new(0, 0, 0) -- Kerbol at center
     end
-    
+
     local parentRadius = PhysicsConstants[parent].RADIUS
     local orbitMultiplier = 4 -- Base orbit distance multiplier
-    
+
     -- Custom positioning logic for different bodies
     if parent == "KERBOL" then
         -- Position planets in a spiral around Kerbol
@@ -157,7 +157,7 @@ end
 function PlanetTemplateGenerator.createTemplate(bodyName)
     local template = Instance.new("Model")
     template.Name = "PlanetTemplate_" .. bodyName
-    
+
     local primaryPart = Instance.new("Part")
     primaryPart.Name = "PrimaryPart"
     primaryPart.Size = Vector3.new(
@@ -165,12 +165,12 @@ function PlanetTemplateGenerator.createTemplate(bodyName)
         PhysicsConstants[bodyName].RADIUS * 2,
         PhysicsConstants[bodyName].RADIUS * 2
     )
-    
+
     primaryPart.Position = getRelativePosition(bodyName)
     primaryPart.Anchored = true
     primaryPart.BrickColor = BrickColor.new(PLANET_PROPERTIES[bodyName].COLOR)
     primaryPart.Material = PLANET_PROPERTIES[bodyName].MATERIAL
-    
+
     -- Add atmosphere if applicable
     if PhysicsConstants[bodyName].ATMOSPHERE_HEIGHT then
         local atmosphere = Instance.new("Part")
@@ -189,11 +189,35 @@ function PlanetTemplateGenerator.createTemplate(bodyName)
         atmosphere.Material = Enum.Material.ForceField
         atmosphere.Parent = template
     end
-    
+
     primaryPart.Parent = template
     template.PrimaryPart = primaryPart
-    
+
+    -- Store parent information as attribute
+    if PLANET_PROPERTIES[bodyName].PARENT then
+        template:SetAttribute("ParentBody", PLANET_PROPERTIES[bodyName].PARENT)
+    end
+
     return template
+end
+
+-- Start orbiting all moons around their parent bodies
+function PlanetTemplateGenerator.startOrbits(celestialBodies)
+    for bodyName, body in pairs(celestialBodies) do
+        local parentName = body:GetAttribute("ParentBody")
+        if parentName and celestialBodies[parentName] then
+            local parentBody = celestialBodies[parentName]
+            local orbitRadius = (getRelativePosition(bodyName) - parentBody.PrimaryPart.Position).Magnitude
+
+            -- Add inclination for specific bodies
+            local inclination = nil
+            if bodyName == "MINMUS" then
+                inclination = math.rad(6) -- 6-degree inclination for Minmus
+            end
+
+            OrbitalMotion.startOrbiting(body, parentBody, orbitRadius, inclination)
+        end
+    end
 end
 
 return PlanetTemplateGenerator

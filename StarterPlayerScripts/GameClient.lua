@@ -5,14 +5,22 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SpacecraftSystem = require(game.ReplicatedStorage.Modules.SpacecraftSystem)
 local GameUI = require(game.StarterGui.GameUI)
+local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
+local PlanetTemplateGenerator = require(game.ReplicatedStorage.Assets.Planets.PlanetTemplateGenerator)
+
+print("[GameClient] Starting initialization...")
 
 -- Get RemoteEvents
 local Events = {
     UpdateThrottle = ReplicatedStorage:WaitForChild("UpdateThrottle"),
     UpdateRotation = ReplicatedStorage:WaitForChild("UpdateRotation"),
     ToggleSAS = ReplicatedStorage:WaitForChild("ToggleSAS"),
-    Stage = ReplicatedStorage:WaitForChild("Stage")
+    Stage = ReplicatedStorage:WaitForChild("Stage"),
+    SpacecraftUpdate = ReplicatedStorage:WaitForChild("SpacecraftUpdate"),
+    CelestialBodyUpdate = ReplicatedStorage:WaitForChild("CelestialBodyUpdate")
 }
+
+print("[GameClient] Found all RemoteEvents")
 
 local _GameClient = {
     ui = nil,
@@ -31,9 +39,23 @@ local _GameClient = {
 }
 
 function _GameClient:Initialize()
-    print("[GameClient] Initializing")
+    print("[GameClient] Initializing client systems")
     self.ui = GameUI.new()
-    self.celestialBodies = workspace:WaitForChild("CelestialBodies") -- Get the folder containing all planets
+    self.celestialBodies = workspace:WaitForChild("CelestialBodies")
+    print("[GameClient] Found CelestialBodies folder")
+
+    -- Set up spacecraft update handler
+    Events.SpacecraftUpdate.OnClientEvent:Connect(function(spacecraftData)
+        print("[GameClient] Received spacecraft update")
+        self.spacecraft = spacecraftData
+        self:UpdateUI()
+    end)
+
+    -- Set up celestial body update handler
+    Events.CelestialBodyUpdate.OnClientEvent:Connect(function(celestialBodyData)
+        print("[GameClient] Received celestial body update")
+        self:UpdateUI()
+    end)
 
     self:SetupInputHandling()
     self:SetupUpdateLoop()
@@ -120,12 +142,12 @@ function _GameClient:UpdateThrottle(direction)
     else
         self.throttle = 0
     end
-    print("[GameClient] Updating throttle to:", self.throttle)
+    print(string.format("[GameClient] Updating throttle to: %.2f", self.throttle))
     Events.UpdateThrottle:FireServer(self.throttle)
 end
 
 function _GameClient:UpdateRotation(direction)
-    print("[GameClient] Sending rotation update:", direction)
+    print(string.format("[GameClient] Sending rotation update: %s", direction))
     Events.UpdateRotation:FireServer(direction)
 end
 
@@ -139,7 +161,12 @@ function _GameClient:UpdateUI()
     if not self.spacecraft then return end
 
     local primaryPart = self.spacecraft.parts[1]
-    local altitude = (primaryPart.Position - workspace.Kerbin.PrimaryPart.Position).Magnitude
+    if not primaryPart then return end
+
+    local kerbinPart = workspace.CelestialBodies:FindFirstChild("KERBIN")
+    if not kerbinPart or not kerbinPart.PrimaryPart then return end
+
+    local altitude = (primaryPart.Position - kerbinPart.PrimaryPart.Position).Magnitude
     local velocity = primaryPart.Velocity.Magnitude
 
     self.ui:updateAltitude(altitude)
@@ -154,14 +181,23 @@ function _GameClient:UpdateUI()
             celestialBodies[body.Name] = body
         end
     end
-    self.ui:updateDebug(self.spacecraft, celestialBodies)
+
+    self.ui:updateDebug(
+        self.spacecraft, 
+        celestialBodies,
+        PhysicsConstants,
+        PlanetTemplateGenerator
+    )
 end
 
 function _GameClient:UpdateSAS()
     if not self.spacecraft then return end
-    print("[GameClient] Updating SAS status:", self.controls.sasEnabled)
+    print(string.format("[GameClient] Updating SAS status: %s", 
+        self.controls.sasEnabled and "ON" or "OFF"))
     self.ui:updateSAS(self.controls.sasEnabled)
 end
 
 -- Initialize the game client immediately
+print("[GameClient] Starting client initialization...")
 _GameClient:Initialize()
+print("[GameClient] Client initialization completed")
