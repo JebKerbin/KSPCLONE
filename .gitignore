@@ -1,0 +1,14 @@
+# Roblox Studio files
+*.rbxl.lock
+*.rbxl
+*.rbxm
+*.rbxmx
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Replit specific
+.replit
+.breakpoints
+replit.nix
