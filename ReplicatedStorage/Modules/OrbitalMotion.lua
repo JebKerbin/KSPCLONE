@@ -1,13 +1,13 @@
 local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
 local RunService = game:GetService("RunService")
 
-local OrbitalMotion = {}
-
 -- Cache math functions for performance
 local cos = math.cos
 local sin = math.sin
 local pi = math.pi
 local sqrt = math.sqrt
+
+local OrbitalMotion = {}
 
 -- Calculate orbital position at a given time using CFrame for better performance
 function OrbitalMotion.calculateOrbitalPosition(parentPosition, orbitRadius, period, time, inclination)

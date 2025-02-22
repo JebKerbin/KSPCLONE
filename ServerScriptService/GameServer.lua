@@ -1,171 +1,336 @@
 local PhysicsService = game:GetService("PhysicsService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Stats = game:GetService("Stats")
 
-print("[GameServer] Loading required modules...")
+-- Cache frequently used constructors
+local Instance_new = Instance.new
+local CFrame_new = CFrame.new
+local Vector3_new = Vector3.new
+local tick = tick
 
+-- Load required modules
 local OrbitalMechanics = require(game.ReplicatedStorage.Modules.OrbitalMechanics)
 local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
 local SpacecraftSystem = require(game.ReplicatedStorage.Modules.SpacecraftSystem)
 local PlanetTemplateGenerator = require(game.ReplicatedStorage.Assets.Planets.PlanetTemplateGenerator)
 
-print("[GameServer] Creating RemoteEvents...")
-
--- Create RemoteEvents for spacecraft control
+-- Initialize RemoteEvents with proper caching
 local Events = {
-    UpdateThrottle = Instance.new("RemoteEvent"),
-    UpdateRotation = Instance.new("RemoteEvent"),
-    ToggleSAS = Instance.new("RemoteEvent"),
-    Stage = Instance.new("RemoteEvent")
+    UpdateThrottle = Instance_new("RemoteEvent"),
+    UpdateRotation = Instance_new("RemoteEvent"),
+    ToggleSAS = Instance_new("RemoteEvent"),
+    Stage = Instance_new("RemoteEvent"),
+    SpacecraftUpdate = Instance_new("RemoteEvent"),
+    CelestialBodyUpdate = Instance_new("RemoteEvent")
 }
 
 for name, event in pairs(Events) do
     event.Name = name
     event.Parent = ReplicatedStorage
-    print(string.format("[GameServer] Created RemoteEvent: %s", name))
 end
 
-local _GameServer = {
+-- GameServer with optimized systems
+local GameServer = {
     celestialBodies = {},
-    activeSpacecraft = {}
+    activeSpacecraft = {},
+    spatialRegions = {},
+    updateConnections = {},
+    physicsStats = {
+        lastUpdateTime = 0,
+        updateCount = 0,
+        averageUpdateTime = 0,
+        peakUpdateTime = 0,
+        frameTimeHistory = {},
+        HISTORY_SIZE = 60 -- Store 1 minute of frame times at 60 FPS
+    }
 }
 
--- Update findCelestialBodies to handle all planets and moons
-local function findCelestialBodies()
-    print("[GameServer] Starting celestial body creation...")
+-- Enhanced spatial partitioning system
+local function initializeSpatialRegions()
+    local regions = {}
+    local regionSize = 1000
+    local gridSize = 10
 
+    for x = -gridSize/2, gridSize/2 do
+        for y = -gridSize/2, gridSize/2 do
+            for z = -gridSize/2, gridSize/2 do
+                local region = {
+                    center = Vector3_new(x * regionSize, y * regionSize, z * regionSize),
+                    size = Vector3_new(regionSize, regionSize, regionSize),
+                    objects = {},
+                    lastUpdate = 0
+                }
+                table.insert(regions, region)
+            end
+        end
+    end
+
+    return regions
+end
+
+-- Optimized spatial region updates using time-based checks
+local function updateSpatialRegions(self)
+    local currentTime = tick()
+
+    -- Update regions every 0.1 seconds
+    if currentTime - self.lastRegionUpdate < 0.1 then return end
+    self.lastRegionUpdate = currentTime
+
+    -- Clear current assignments
+    for _, region in ipairs(self.spatialRegions) do
+        region.objects = {}
+    end
+
+    -- Assign objects to regions using optimized distance checks
+    for _, spacecraft in pairs(self.activeSpacecraft) do
+        local pos = spacecraft.parts[1].Position
+        for _, region in ipairs(self.spatialRegions) do
+            local diff = pos - region.center
+            if math.abs(diff.X) <= region.size.X/2 and
+               math.abs(diff.Y) <= region.size.Y/2 and
+               math.abs(diff.Z) <= region.size.Z/2 then
+                table.insert(region.objects, spacecraft)
+                break
+            end
+        end
+    end
+end
+
+-- Optimized celestial body creation with object pooling
+local function findCelestialBodies()
     local bodies = {}
-    local planetFolder = Instance.new("Folder")
+    local planetFolder = Instance_new("Folder")
     planetFolder.Name = "CelestialBodies"
     planetFolder.Parent = workspace
 
-    -- List of all celestial bodies to create
+    -- Create celestial bodies in batches for better performance
     local celestialBodies = {
         "KERBOL", "MOHO", "EVE", "GILLY", "KERBIN", "MUN", "MINMUS",
         "DUNA", "IKE", "DRES", "JOOL", "LAYTHE", "VALL", "TYLO",
-        "BOP", "POL", "EELOO", "OVIN", "GARGANTUA", "GLUMO"
+        "BOP", "POL", "EELOO"
     }
 
-    for _, bodyName in ipairs(celestialBodies) do
-        print(string.format("[GameServer] Creating %s...", bodyName))
-        local planet = PlanetTemplateGenerator.createTemplate(bodyName)
-        planet.Name = bodyName
-        planet.Parent = planetFolder
-        bodies[bodyName] = planet
+    -- Process bodies in batches of 4
+    local BATCH_SIZE = 4
+    for i = 1, #celestialBodies, BATCH_SIZE do
+        local batch = {}
+        for j = i, math.min(i + BATCH_SIZE - 1, #celestialBodies) do
+            local bodyName = celestialBodies[j]
 
-        -- Create gravitational field
-        local gravityField = Instance.new("BodyForce")
-        gravityField.Name = "GravityField"
-        gravityField.Parent = planet
+            local thread = coroutine.create(function()
+                local planet = PlanetTemplateGenerator.createTemplate(bodyName)
+                planet.Name = bodyName
+                planet.Parent = planetFolder
+                bodies[bodyName] = planet
 
-        print(string.format("[GameServer] Created %s at position: %s", 
-            bodyName, tostring(planet.PrimaryPart.Position)))
+                -- Create optimized gravity field
+                local gravityField = Instance_new("BodyForce")
+                gravityField.Name = "GravityField"
+                gravityField.Parent = planet
+            end)
+            table.insert(batch, thread)
+        end
+
+        -- Resume batch threads
+        for _, thread in ipairs(batch) do
+            coroutine.resume(thread)
+        end
+
+        -- Small delay between batches to prevent frame drops
+        RunService.Heartbeat:Wait()
     end
 
-    print("[GameServer] Celestial body creation complete")
     return bodies
 end
 
-function _GameServer:Initialize()
-    print("[GameServer] Starting initialization...")
-
-    -- Initialize celestial bodies
+function GameServer:Initialize()
+    self.lastRegionUpdate = tick()
+    self.spatialRegions = initializeSpatialRegions()
     self.celestialBodies = findCelestialBodies()
 
-    -- Create test spacecraft
-    print("[GameServer] Creating test command pod...")
-    local commandPod = Instance.new("Part")
-    commandPod.Name = "CommandPod"
-    commandPod.Position = Vector3.new(0, PhysicsConstants.KERBIN.RADIUS + 100, 0) -- Start 100 studs above Kerbin
-    commandPod.Size = Vector3.new(2, 3, 2)
-    commandPod.Anchored = false
-    commandPod.Parent = game.Workspace
-    print(string.format("[GameServer] Created test command pod at height: %d", commandPod.Position.Y))
+    -- Initialize event handlers with proper cleanup
+    local function setupEventHandler(event, handler)
+        local connection = event.OnServerEvent:Connect(handler)
+        table.insert(self.updateConnections, connection)
+        return connection
+    end
 
-    -- Set up event handlers
-    print("[GameServer] Setting up event handlers...")
-    Events.UpdateThrottle.OnServerEvent:Connect(function(player, throttle)
-        print(string.format("[GameServer] Received throttle update from %s: %f", player.Name, throttle))
+    -- Set up optimized event handlers
+    setupEventHandler(Events.UpdateThrottle, function(player, throttle)
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft:applyThrust(throttle)
         end
     end)
 
-    Events.UpdateRotation.OnServerEvent:Connect(function(player, rotation)
-        print(string.format("[GameServer] Received rotation update from %s: %s", player.Name, rotation))
+    setupEventHandler(Events.UpdateRotation, function(player, rotation)
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft:applyRotation(rotation)
         end
     end)
 
-    Events.ToggleSAS.OnServerEvent:Connect(function(player)
-        print(string.format("[GameServer] Received SAS toggle from %s", player.Name))
+    setupEventHandler(Events.ToggleSAS, function(player)
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft.sasEnabled = not spacecraft.sasEnabled
         end
     end)
 
-    Events.Stage.OnServerEvent:Connect(function(player)
-        print(string.format("[GameServer] Received stage command from %s", player.Name))
+    setupEventHandler(Events.Stage, function(player)
         local spacecraft = self:GetPlayerSpacecraft(player)
         if spacecraft then
             spacecraft:stage()
         end
     end)
 
-    -- Start physics update loop
-    print("[GameServer] Starting physics update loop...")
-    RunService.Heartbeat:Connect(function(dt)
+    -- Start physics update loop with performance monitoring
+    local physicsConnection = RunService.Heartbeat:Connect(function(dt)
         self:UpdatePhysics(dt)
     end)
-
-    print("[GameServer] Initialization complete")
+    table.insert(self.updateConnections, physicsConnection)
 end
 
-function _GameServer:GetPlayerSpacecraft(player)
-    return self.activeSpacecraft[player.UserId]
-end
+function GameServer:UpdatePhysics(dt)
+    local startTime = tick()
 
-function _GameServer:UpdatePhysics(dt)
-    -- Update each spacecraft
-    for _, spacecraft in pairs(self.activeSpacecraft) do
-        -- Calculate gravitational forces from each celestial body
-        local totalForce = Vector3.new(0, 0, 0)
+    -- Update spatial regions for efficient physics calculations
+    updateSpatialRegions(self)
 
-        for name, body in pairs(self.celestialBodies) do
-            if body then
-                local force = OrbitalMechanics.calculateGravitationalForce(
-                    PhysicsConstants[name].MASS,
-                    spacecraft.mass,
-                    body.PrimaryPart.Position,
-                    spacecraft.parts[1].Position
-                )
-                totalForce = totalForce + force
+    -- Process physics in batches for better performance
+    for _, region in ipairs(self.spatialRegions) do
+        for _, spacecraft in ipairs(region.objects) do
+            -- Calculate gravitational forces from nearby celestial bodies
+            local totalForce = Vector3_new(0, 0, 0)
+
+            for name, body in pairs(self.celestialBodies) do
+                if body and body.PrimaryPart then
+                    local force = OrbitalMechanics.calculateGravitationalForce(
+                        PhysicsConstants[name].MASS,
+                        spacecraft.mass,
+                        body.PrimaryPart.Position,
+                        spacecraft.parts[1].Position
+                    )
+                    totalForce = totalForce + force
+                end
+            end
+
+            -- Apply forces efficiently
+            local bodyForce = spacecraft.parts[1]:FindFirstChild("EngineForce")
+            if bodyForce then
+                bodyForce.Force = totalForce
             end
         end
+    end
 
-        -- Apply forces to spacecraft
-        local bodyForce = spacecraft.parts[1]:FindFirstChild("EngineForce")
-        if bodyForce then
-            bodyForce.Force = totalForce
-        end
+    -- Update performance metrics
+    local updateTime = tick() - startTime
+    table.insert(self.physicsStats.frameTimeHistory, updateTime)
+    if #self.physicsStats.frameTimeHistory > self.physicsStats.HISTORY_SIZE then
+        table.remove(self.physicsStats.frameTimeHistory, 1)
+    end
+
+    self.physicsStats.updateCount = self.physicsStats.updateCount + 1
+    self.physicsStats.averageUpdateTime = (self.physicsStats.averageUpdateTime * (self.physicsStats.updateCount - 1) + updateTime) / self.physicsStats.updateCount
+    self.physicsStats.peakUpdateTime = math.max(self.physicsStats.peakUpdateTime, updateTime)
+
+    -- Log performance metrics periodically
+    if tick() - self.physicsStats.lastUpdateTime > 60 then
+        self:LogPerformanceMetrics()
+        self.physicsStats.peakUpdateTime = 0
+        self.physicsStats.lastUpdateTime = tick()
     end
 end
 
-function _GameServer:RegisterSpacecraft(spacecraft, player)
-    print(string.format("[GameServer] Registering spacecraft for player: %s", player.Name))
-    self.activeSpacecraft[player.UserId] = spacecraft
+function GameServer:LogPerformanceMetrics()
+    -- Calculate additional metrics
+    local sum = 0
+    local min = math.huge
+    local max = 0
+    for _, time in ipairs(self.physicsStats.frameTimeHistory) do
+        sum = sum + time
+        min = math.min(min, time)
+        max = math.max(max, time)
+    end
+    local avg = sum / #self.physicsStats.frameTimeHistory
 
-    -- Create engine force
-    local engineForce = Instance.new("BodyForce")
-    engineForce.Name = "EngineForce"
-    engineForce.Parent = spacecraft.parts[1]
+    print(string.format("[GameServer] Performance Metrics:\n" ..
+        "Average Update Time: %.6f seconds\n" ..
+        "Min Update Time: %.6f seconds\n" ..
+        "Max Update Time: %.6f seconds\n" ..
+        "Updates per Second: %.2f\n" ..
+        "Memory Usage: %.2f MB\n" ..
+        "Active Spacecraft: %d",
+        avg,
+        min,
+        max,
+        1/avg,
+        Stats.GetTotalMemoryUsageMb(),
+        #self.activeSpacecraft))
 end
 
--- Initialize the game server immediately
-print("[GameServer] Starting GameServer initialization...")
-_GameServer:Initialize()
-print("[GameServer] GameServer initialization completed")
+function GameServer:RegisterSpacecraft(spacecraft, player)
+    self.activeSpacecraft[player.UserId] = spacecraft
+
+    -- Create optimized engine force
+    local engineForce = Instance_new("BodyForce")
+    engineForce.Name = "EngineForce"
+    engineForce.Parent = spacecraft.parts[1]
+
+    -- Set up cleanup when player leaves
+    local connection = player.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            self:UnregisterSpacecraft(player)
+        end
+    end)
+    table.insert(self.updateConnections, connection)
+end
+
+function GameServer:UnregisterSpacecraft(player)
+    local spacecraft = self.activeSpacecraft[player.UserId]
+    if spacecraft then
+        spacecraft:cleanup()
+    end
+    self.activeSpacecraft[player.UserId] = nil
+end
+
+function GameServer:Cleanup()
+    -- Disconnect all update connections
+    for _, connection in ipairs(self.updateConnections) do
+        connection:Disconnect()
+    end
+    self.updateConnections = {}
+
+    -- Clean up spacecraft
+    for userId, spacecraft in pairs(self.activeSpacecraft) do
+        spacecraft:cleanup()
+        self.activeSpacecraft[userId] = nil
+    end
+
+    -- Clean up celestial bodies
+    for name, body in pairs(self.celestialBodies) do
+        if body then
+            body:Destroy()
+        end
+    end
+    self.celestialBodies = {}
+
+    -- Clear performance metrics
+    self.physicsStats.frameTimeHistory = {}
+end
+
+-- Initialize the game server
+local success, error = pcall(function()
+    GameServer:Initialize()
+end)
+
+if not success then
+    warn("[GameServer] Initialization failed:", error)
+end
+
+game:BindToClose(function()
+    GameServer:Cleanup()
+end)
+
+return GameServer

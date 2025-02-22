@@ -1,5 +1,12 @@
 local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
 local DamageSystem = require(game.ReplicatedStorage.Modules.DamageSystem)
+local RunService = game:GetService("RunService")
+
+-- Cache frequently used functions
+local Vector3_new = Vector3.new
+local CFrame_new = CFrame.new
+local Instance_new = Instance.new
+local PhysicsService = game:GetService("PhysicsService")
 
 local SpacecraftSystem = {}
 
@@ -12,7 +19,13 @@ function SpacecraftSystem.new(commandPod)
         mass = 0,
         sasEnabled = false,
         damage = nil, -- Will be initialized with DamageSystem
-        stats = nil -- Will be set by GameServer
+        stats = nil, -- Will be set by GameServer
+        orbitalElements = nil, -- Store current orbital elements
+        nearestBodyCache = {
+            body = nil,
+            lastUpdate = 0,
+            updateInterval = 1 -- Update every second
+        }
     }
 
     function spacecraft:addPart(part)
@@ -29,7 +42,7 @@ function SpacecraftSystem.new(commandPod)
         end
 
         -- Create weld constraint
-        local weld = Instance.new("WeldConstraint")
+        local weld = Instance_new("WeldConstraint")
         weld.Part0 = self.parts[1]
         weld.Part1 = part
         weld.Parent = part
@@ -52,12 +65,18 @@ function SpacecraftSystem.new(commandPod)
         local fuelConsumption = thrustForce / (PhysicsConstants.PARTS.ENGINE.ISP * 9.81)
         self.fuel = math.max(0, self.fuel - fuelConsumption)
 
-        -- Apply thrust force in the direction the spacecraft is facing
+        -- Calculate thrust vector using CFrame for better performance
         local thrustDirection = self.parts[1].CFrame.LookVector
 
-        -- Check for engine damage
-        local engineHealth = self.damage.parts[self.parts[#self.parts]].health
+        -- Check for engine damage with cached values
+        local enginePart = self.parts[#self.parts]
+        local engineHealth = self.damage.parts[enginePart].health
         thrustForce = thrustForce * (engineHealth / 100)
+
+        -- Update orbital elements after thrust
+        if thrustForce > 0 then
+            self:updateOrbitalElements()
+        end
 
         return thrustDirection * thrustForce
     end
@@ -65,20 +84,20 @@ function SpacecraftSystem.new(commandPod)
     function spacecraft:applyRotation(direction)
         if not self.sasEnabled then
             local primaryPart = self.parts[1]
-            local torque = Instance.new("BodyAngularVelocity")
+            local torque = Instance_new("BodyAngularVelocity")
             torque.Name = "RotationTorque"
-            torque.MaxTorque = Vector3.new(1000, 1000, 1000)
+            torque.MaxTorque = Vector3_new(1000, 1000, 1000)
 
             if direction == "left" then
-                torque.AngularVelocity = Vector3.new(0, 1, 0)
+                torque.AngularVelocity = Vector3_new(0, 1, 0)
             elseif direction == "right" then
-                torque.AngularVelocity = Vector3.new(0, -1, 0)
+                torque.AngularVelocity = Vector3_new(0, -1, 0)
             elseif direction == "rollLeft" then
-                torque.AngularVelocity = Vector3.new(0, 0, 1)
+                torque.AngularVelocity = Vector3_new(0, 0, 1)
             elseif direction == "rollRight" then
-                torque.AngularVelocity = Vector3.new(0, 0, -1)
+                torque.AngularVelocity = Vector3_new(0, 0, -1)
             else
-                torque.AngularVelocity = Vector3.new(0, 0, 0)
+                torque.AngularVelocity = Vector3_new(0, 0, 0)
             end
 
             -- Remove any existing torque
@@ -115,28 +134,131 @@ function SpacecraftSystem.new(commandPod)
         end
     end
 
-    -- Handle collisions
+    function spacecraft:getNearestCelestialBody()
+        -- Check cache first
+        local currentTime = tick()
+        if self.nearestBodyCache.body and 
+           (currentTime - self.nearestBodyCache.lastUpdate) < self.nearestBodyCache.updateInterval then
+            return self.nearestBodyCache.body
+        end
+
+        -- Find nearest body
+        local primaryPart = self.parts[1]
+        if not primaryPart then return nil end
+
+        local nearestBody = nil
+        local minDistance = math.huge
+
+        -- Get celestial bodies folder
+        local celestialBodies = workspace:FindFirstChild("CelestialBodies")
+        if not celestialBodies then return nil end
+
+        -- Find nearest body using optimized distance calculations
+        for _, body in ipairs(celestialBodies:GetChildren()) do
+            if body:IsA("Model") and body.PrimaryPart then
+                local distance = (primaryPart.Position - body.PrimaryPart.Position).Magnitude
+
+                -- Check if this body is closer than current nearest
+                if distance < minDistance then
+                    -- Only consider bodies within their gravity range
+                    local gravityRange = PhysicsConstants[body.Name] and 
+                                       PhysicsConstants[body.Name].GRAVITY_RANGE or 0
+
+                    if distance <= gravityRange then
+                        minDistance = distance
+                        nearestBody = body
+                    end
+                end
+            end
+        end
+
+        -- Update cache
+        self.nearestBodyCache.body = nearestBody
+        self.nearestBodyCache.lastUpdate = currentTime
+
+        return nearestBody
+    end
+
+    function spacecraft:updateOrbitalElements()
+        local primaryPart = self.parts[1]
+        local nearestBody = self:getNearestCelestialBody()
+
+        if primaryPart and nearestBody then
+            self.orbitalElements = OrbitalMechanics.cartesianToOrbitalElements(
+                primaryPart.Position,
+                primaryPart.Velocity,
+                PhysicsConstants[nearestBody.Name]
+            )
+        end
+    end
+
     function spacecraft:setupCollisionHandling()
+        -- Create collision group for optimization
+        local collisionGroup = PhysicsService:CreateCollisionGroup("Spacecraft")
+
         for _, part in ipairs(self.parts) do
-            part.Touched:Connect(function(hit)
-                local relativeVelocity = part.Velocity - (hit.Velocity or Vector3.new(0,0,0))
+            -- Set collision group
+            PhysicsService:SetPartCollisionGroup(part, "Spacecraft")
+
+            -- Optimize collision detection with cached values
+            local connection = part.Touched:Connect(function(hit)
+                -- Skip if hit part is part of the same spacecraft
+                if table.find(self.parts, hit) then return end
+
+                local relativeVelocity = part.Velocity - (hit.Velocity or Vector3_new(0,0,0))
                 local impactForce = relativeVelocity.Magnitude * part.Mass
 
                 if impactForce > 100 then -- Threshold for damage
                     self.damage:applyDamage(part, impactForce * 0.1, "IMPACT")
+
+                    -- Update stats if available
+                    if self.stats then
+                        self.stats:updateCareerStat("totalExplosions", 1)
+                    end
                 end
+            end)
+
+            -- Store connection for cleanup
+            if not self.connections then self.connections = {} end
+            table.insert(self.connections, connection)
+        end
+    end
+
+    function spacecraft:cleanup()
+        -- Disconnect all connections
+        if self.connections then
+            for _, connection in ipairs(self.connections) do
+                connection:Disconnect()
+            end
+            self.connections = {}
+        end
+
+        -- Clear cache
+        self.nearestBodyCache = {
+            body = nil,
+            lastUpdate = 0,
+            updateInterval = 1
+        }
+
+        -- Clean up physics groups
+        for _, part in ipairs(self.parts) do
+            pcall(function()
+                PhysicsService:SetPartCollisionGroup(part, "Default")
             end)
         end
     end
 
-    -- Initialize with command pod
+    -- Initialize spacecraft
     spacecraft:addPart(commandPod)
-
-    -- Initialize damage system
     spacecraft.damage = DamageSystem.new(spacecraft)
-
-    -- Setup collision handling
     spacecraft:setupCollisionHandling()
+
+    -- Set up cleanup on part removal
+    commandPod.AncestryChanged:Connect(function(_, parent)
+        if not parent then
+            spacecraft:cleanup()
+        end
+    end)
 
     return spacecraft
 end

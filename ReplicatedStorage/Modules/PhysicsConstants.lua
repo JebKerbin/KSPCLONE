@@ -3,23 +3,21 @@ local PhysicsConstants = {
     G = 6.67430e-11 * 1e-6, -- Scaled down to prevent extreme forces
 
     -- Physics configuration
-    ZERO_GRAVITY_THRESHOLD = 1000, -- Distance beyond which gravity becomes negligible
-    GRAVITY_FALLOFF_RATE = 2, -- Square of distance falloff (realistic)
-    MIN_GRAVITY = 0.001, -- Minimum gravity force to prevent complete weightlessness
+    ZERO_GRAVITY_THRESHOLD = 1000,
+    GRAVITY_FALLOFF_RATE = 2,
+    MIN_GRAVITY = 0.001,
+    SYSTEM_SCALE = 0.005,
 
-    -- Solar System Scale (in Roblox studs)
-    SYSTEM_SCALE = 0.005, -- Scale factor for the entire system
-
-    -- Kerbol System (KSP1)
+    -- KSP1 Solar System
     KERBOL = {
         MASS = 1.7565459e28 * 1e-9,
         RADIUS = 261600000 * 0.005,
         SURFACE_GRAVITY = 17.1,
-        ORBIT_RADIUS = 0, -- Center of system
-        GRAVITY_RANGE = 800000 -- Range where gravity is significant
+        ORBIT_RADIUS = 0,
+        GRAVITY_RANGE = 800000
     },
 
-    -- Inner Planets
+    -- KSP1 Inner Planets
     MOHO = {
         MASS = 2.5263314e21 * 1e-9,
         RADIUS = 250000 * 0.005,
@@ -37,6 +35,15 @@ local PhysicsConstants = {
         GRAVITY_RANGE = 100000
     },
 
+    GILLY = {
+        MASS = 1.2420512e17 * 1e-9,
+        RADIUS = 13000 * 0.005,
+        SURFACE_GRAVITY = 0.049,
+        ORBIT_RADIUS = 31500000 * 0.005,
+        PARENT = "EVE",
+        GRAVITY_RANGE = 8000
+    },
+
     KERBIN = {
         MASS = 5.2915793e22 * 1e-9,
         RADIUS = 600000 * 0.005,
@@ -46,6 +53,24 @@ local PhysicsConstants = {
         GRAVITY_RANGE = 80000
     },
 
+    MUN = {
+        MASS = 9.7599066e20 * 1e-9,
+        RADIUS = 200000 * 0.005,
+        SURFACE_GRAVITY = 1.63,
+        ORBIT_RADIUS = 12000000 * 0.005,
+        PARENT = "KERBIN",
+        GRAVITY_RANGE = 30000
+    },
+
+    MINMUS = {
+        MASS = 2.6457580e19 * 1e-9,
+        RADIUS = 60000 * 0.005,
+        SURFACE_GRAVITY = 0.491,
+        ORBIT_RADIUS = 47000000 * 0.005,
+        PARENT = "KERBIN",
+        GRAVITY_RANGE = 20000
+    },
+
     DUNA = {
         MASS = 4.5154812e21 * 1e-9,
         RADIUS = 320000 * 0.005,
@@ -53,6 +78,15 @@ local PhysicsConstants = {
         ATMOSPHERE_HEIGHT = 50000 * 0.005,
         ORBIT_RADIUS = 20726155264 * 0.005,
         GRAVITY_RANGE = 60000
+    },
+
+    IKE = {
+        MASS = 2.7821949e20 * 1e-9,
+        RADIUS = 130000 * 0.005,
+        SURFACE_GRAVITY = 1.10,
+        ORBIT_RADIUS = 3200000 * 0.005,
+        PARENT = "DUNA",
+        GRAVITY_RANGE = 25000
     },
 
     DRES = {
@@ -72,6 +106,52 @@ local PhysicsConstants = {
         GRAVITY_RANGE = 200000
     },
 
+    LAYTHE = {
+        MASS = 2.9397311e22 * 1e-9,
+        RADIUS = 500000 * 0.005,
+        SURFACE_GRAVITY = 7.85,
+        ATMOSPHERE_HEIGHT = 50000 * 0.005,
+        ORBIT_RADIUS = 27184000 * 0.005,
+        PARENT = "JOOL",
+        GRAVITY_RANGE = 70000
+    },
+
+    VALL = {
+        MASS = 3.1088028e21 * 1e-9,
+        RADIUS = 300000 * 0.005,
+        SURFACE_GRAVITY = 2.31,
+        ORBIT_RADIUS = 43152000 * 0.005,
+        PARENT = "JOOL",
+        GRAVITY_RANGE = 50000
+    },
+
+    TYLO = {
+        MASS = 4.2332127e22 * 1e-9,
+        RADIUS = 600000 * 0.005,
+        SURFACE_GRAVITY = 7.85,
+        ORBIT_RADIUS = 68500000 * 0.005,
+        PARENT = "JOOL",
+        GRAVITY_RANGE = 80000
+    },
+
+    BOP = {
+        MASS = 3.7261536e19 * 1e-9,
+        RADIUS = 65000 * 0.005,
+        SURFACE_GRAVITY = 0.589,
+        ORBIT_RADIUS = 128500000 * 0.005,
+        PARENT = "JOOL",
+        GRAVITY_RANGE = 25000
+    },
+
+    POL = {
+        MASS = 1.0813636e19 * 1e-9,
+        RADIUS = 44000 * 0.005,
+        SURFACE_GRAVITY = 0.373,
+        ORBIT_RADIUS = 179890000 * 0.005,
+        PARENT = "JOOL",
+        GRAVITY_RANGE = 20000
+    },
+
     EELOO = {
         MASS = 1.1149224e21 * 1e-9,
         RADIUS = 210000 * 0.005,
@@ -80,62 +160,63 @@ local PhysicsConstants = {
         GRAVITY_RANGE = 45000
     },
 
-    -- Moons
-    MUN = {
-        MASS = 9.7599066e20 * 1e-9,
-        RADIUS = 200000 * 0.005,
-        SURFACE_GRAVITY = 1.63,
-        ORBIT_RADIUS = 12000000 * 0.005, -- Relative to Kerbin
-        PARENT = "KERBIN",
-        GRAVITY_RANGE = 30000
+    -- KSP2 New Star Systems
+    CIRO = { -- KSP2's version of the Sun
+        MASS = 1.7565459e28 * 1e-9,
+        RADIUS = 261600000 * 0.005,
+        SURFACE_GRAVITY = 17.1,
+        ORBIT_RADIUS = 0,
+        GRAVITY_RANGE = 800000
     },
 
-    MINMUS = {
-        MASS = 2.6457580e19 * 1e-9,
-        RADIUS = 60000 * 0.005,
-        SURFACE_GRAVITY = 0.491,
-        ORBIT_RADIUS = 47000000 * 0.005, -- Relative to Kerbin
-        PARENT = "KERBIN",
-        GRAVITY_RANGE = 20000
+    -- Gargantuan System
+    GARGANTUA = { -- Binary partner of Ciro
+        MASS = 2.1956824e28 * 1e-9,
+        RADIUS = 300000000 * 0.005,
+        SURFACE_GRAVITY = 19.5,
+        ORBIT_RADIUS = 150000000000 * 0.005,
+        GRAVITY_RANGE = 1000000
     },
 
-    -- Asteroid Belt Configuration
-    ASTEROID_BELT = {
-        INNER_RADIUS = 40839348203 * 0.005, -- Near Dres
-        OUTER_RADIUS = 68773560320 * 0.005, -- Near Jool
-        DENSITY = 0.1, -- Asteroid density in the belt
-        ASTEROID_SIZES = {
-            MIN = 10,
-            MAX = 100
-        }
+    GLUMO = {
+        MASS = 8.4664254e22 * 1e-9,
+        RADIUS = 800000 * 0.005,
+        SURFACE_GRAVITY = 8.8,
+        ATMOSPHERE_HEIGHT = 80000 * 0.005,
+        ORBIT_RADIUS = 12000000000 * 0.005,
+        PARENT = "GARGANTUA",
+        GRAVITY_RANGE = 100000
     },
 
-    -- Space Debris Configuration
-    SPACE_DEBRIS = {
-        SPAWN_RATE = 0.1, -- Debris spawned per minute
-        MIN_LIFETIME = 300, -- Minimum time before debris despawns
-        MAX_LIFETIME = 1800, -- Maximum time before debris despawns
-        SIZE_RANGE = {
-            MIN = 1,
-            MAX = 5
-        }
+    -- Ovin System
+    OVIN = {
+        MASS = 3.9152283e23 * 1e-9,
+        RADIUS = 1200000 * 0.005,
+        SURFACE_GRAVITY = 18.2,
+        ATMOSPHERE_HEIGHT = 150000 * 0.005,
+        ORBIT_RADIUS = 80000000000 * 0.005,
+        GRAVITY_RANGE = 150000
     },
 
-    -- Comet Configuration
-    COMETS = {
-        SPAWN_RATE = 0.05, -- Comets spawned per minute
-        TAIL_LENGTH = 50, -- Visual tail length
-        SIZE_RANGE = {
-            MIN = 20,
-            MAX = 200
-        },
-        ORBIT_ECCENTRICITY = {
-            MIN = 0.6,
-            MAX = 0.9
-        }
+    MAYOR = {
+        MASS = 1.2420512e21 * 1e-9,
+        RADIUS = 250000 * 0.005,
+        SURFACE_GRAVITY = 1.3,
+        ORBIT_RADIUS = 5000000 * 0.005,
+        PARENT = "OVIN",
+        GRAVITY_RANGE = 40000
     },
 
-    -- Part specifications 
+    REGENT = {
+        MASS = 8.9427686e20 * 1e-9,
+        RADIUS = 180000 * 0.005,
+        SURFACE_GRAVITY = 1.8,
+        ORBIT_RADIUS = 8000000 * 0.005,
+        PARENT = "OVIN",
+        GRAVITY_RANGE = 35000
+    },
+
+    -- Part specifications remain unchanged
     PARTS = {
         COMMAND_POD = {
             MASS = 1000,
