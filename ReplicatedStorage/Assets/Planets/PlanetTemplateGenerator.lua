@@ -17,6 +17,11 @@ local atmospherePool = {
     inUse = {}
 }
 
+-- Debug logging function
+local function logDebug(bodyName, message, ...)
+    print(string.format("[PlanetTemplateGenerator][%s] %s", bodyName, message:format(...)))
+end
+
 -- Get or create atmosphere from pool
 local function getAtmospherePart()
     local part = table.remove(atmospherePool.parts)
@@ -42,6 +47,25 @@ local function returnAtmospherePart(part)
     end
 end
 
+-- Weld all pieces of a planet together
+local function weldPlanetPieces(model)
+    local primaryPart = model.PrimaryPart
+    if not primaryPart then return end
+
+    local weldCount = 0
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") and part ~= primaryPart then
+            local weld = Instance_new("WeldConstraint")
+            weld.Part0 = primaryPart
+            weld.Part1 = part
+            weld.Parent = part
+            weldCount = weldCount + 1
+        end
+    end
+
+    logDebug(model.Name, "Welded %d pieces to primary part", weldCount)
+end
+
 -- Optimized relative position calculation
 local function getRelativePosition(bodyName)
     if bodyName == "KERBOL" or bodyName == "CIRO" then
@@ -57,9 +81,8 @@ local function getRelativePosition(bodyName)
 
     local orbitRadius = PhysicsConstants[bodyName].ORBIT_RADIUS
 
-    -- Custom positioning logic for different star systems
+    -- Position planets in a spiral around their star
     if parentName == "KERBOL" or parentName == "CIRO" then
-        -- Position planets in a spiral around their star
         local planets = {"MOHO", "EVE", "KERBIN", "DUNA", "DRES", "JOOL", "EELOO", "GARGANTUA", "OVIN"}
         local index = table.find(planets, bodyName) or 1
         local angle = index * (pi / 4)
@@ -69,39 +92,33 @@ local function getRelativePosition(bodyName)
             0
         )
     elseif parentName == "KERBIN" then
-        -- Position Kerbin's moons
+        -- Position Kerbin's moons with inclination
         if bodyName == "MUN" then
             return CFrame_new(orbitRadius, 0, 0)
         else -- Minmus
             return CFrame_new(0, orbitRadius * 0.7071, orbitRadius * 0.7071)
         end
-    elseif parentName == "JOOL" then
-        -- Position Jool's moons in a spiral
-        local moons = {"LAYTHE", "VALL", "TYLO", "BOP", "POL"}
-        local index = table.find(moons, bodyName) or 1
-        local angle = index * (pi / 3)
-        return CFrame_new(
-            cos(angle) * orbitRadius,
-            sin(angle) * orbitRadius,
-            0
-        )
-    elseif parentName == "GARGANTUA" or parentName == "OVIN" then
-        -- Position moons of KSP2 planets
-        local angle = (bodyName == "MAYOR" or bodyName == "GLUMO") and 0 or pi/2
-        return CFrame_new(
-            cos(angle) * orbitRadius,
-            sin(angle) * orbitRadius,
-            0
-        )
     else
-        -- Default positioning for other moons
-        return CFrame_new(orbitRadius, 0, 0)
+        -- Default moon positioning with spiral pattern
+        local moonIndex = 1
+        if parentName == "JOOL" then
+            local moons = {"LAYTHE", "VALL", "TYLO", "BOP", "POL"}
+            moonIndex = table.find(moons, bodyName) or 1
+        end
+        local angle = moonIndex * (pi / 3)
+        return CFrame_new(
+            cos(angle) * orbitRadius,
+            sin(angle) * orbitRadius,
+            0
+        )
     end
 end
 
 local PlanetTemplateGenerator = {}
 
 function PlanetTemplateGenerator.createTemplate(bodyName)
+    logDebug(bodyName, "Creating planet template")
+
     -- Load pre-existing model from ReplicatedStorage.Assets.Planets
     local template = ReplicatedStorage.Assets.Planets["PlanetTemplate_" .. bodyName]:Clone()
     if not template then
@@ -117,19 +134,36 @@ function PlanetTemplateGenerator.createTemplate(bodyName)
         return nil
     end
 
+    -- Verify model scale matches physics constants
+    local size = template:GetExtentsSize()
+    local expectedDiameter = PhysicsConstants[bodyName].RADIUS * 2
+    local scaleDiff = math.abs(size.X - expectedDiameter) / expectedDiameter
+    if scaleDiff > 0.1 then -- Allow 10% difference
+        logDebug(bodyName, "Warning: Model size (%0.2f) differs from expected diameter (%0.2f)", 
+            size.X, expectedDiameter)
+    end
+
+    -- Weld all pieces together
+    weldPlanetPieces(template)
+
     -- Set position using optimized CFrame calculation
-    template:SetPrimaryPartCFrame(getRelativePosition(bodyName))
+    local position = getRelativePosition(bodyName)
+    template:SetPrimaryPartCFrame(position)
+    logDebug(bodyName, "Positioned at (%.1f, %.1f, %.1f)", 
+        position.X, position.Y, position.Z)
 
     -- Add atmosphere if applicable using object pool
     if PhysicsConstants[bodyName].ATMOSPHERE_HEIGHT then
         local atmosphere = getAtmospherePart()
-        atmosphere.Size = Vector3_new(
-            primaryPart.Size.X + PhysicsConstants[bodyName].ATMOSPHERE_HEIGHT * 2,
-            primaryPart.Size.Y + PhysicsConstants[bodyName].ATMOSPHERE_HEIGHT * 2,
-            primaryPart.Size.Z + PhysicsConstants[bodyName].ATMOSPHERE_HEIGHT * 2
-        )
+        -- Calculate atmosphere size based on the model's bounding box
+        local maxExtent = math.max(size.X, size.Y, size.Z)
+        local atmosphereSize = maxExtent + PhysicsConstants[bodyName].ATMOSPHERE_HEIGHT * 2
+        atmosphere.Size = Vector3_new(atmosphereSize, atmosphereSize, atmosphereSize)
         atmosphere.CFrame = template:GetPrimaryPartCFrame()
         atmosphere.Parent = template
+
+        logDebug(bodyName, "Added atmosphere with size %.1f (base size %.1f + height %.1f)",
+            atmosphereSize, maxExtent, PhysicsConstants[bodyName].ATMOSPHERE_HEIGHT * 2)
 
         -- Set up cleanup for atmosphere
         template.AncestryChanged:Connect(function(_, parent)
@@ -142,6 +176,7 @@ function PlanetTemplateGenerator.createTemplate(bodyName)
     -- Store parent information as attribute
     if PhysicsConstants[bodyName].PARENT then
         template:SetAttribute("ParentBody", PhysicsConstants[bodyName].PARENT)
+        logDebug(bodyName, "Set parent body to %s", PhysicsConstants[bodyName].PARENT)
     end
 
     -- Set up proper cleanup
@@ -150,10 +185,12 @@ function PlanetTemplateGenerator.createTemplate(bodyName)
             local orbitConnection = template:GetAttribute(template.Name .. "_OrbitConnection")
             if orbitConnection then
                 RunService:UnbindFromRenderStep(orbitConnection)
+                logDebug(bodyName, "Cleaned up orbit connection")
             end
         end
     end)
 
+    logDebug(bodyName, "Template creation complete")
     return template
 end
 
@@ -174,6 +211,8 @@ function PlanetTemplateGenerator.startOrbits(celestialBodies)
             end
 
             OrbitalMotion.startOrbiting(body, parentBody, orbitRadius, inclination)
+            logDebug(bodyName, "Started orbiting around %s at radius %.1f with inclination %s",
+                parentName, orbitRadius, inclination and string.format("%.1f°", math.deg(inclination)) or "none")
         end
     end
 end

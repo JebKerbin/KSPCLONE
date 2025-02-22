@@ -97,7 +97,7 @@ local function updateSpatialRegions(self)
     end
 end
 
--- Optimized celestial body creation with object pooling
+-- Update the celestial body initialization in GameServer.lua
 local function findCelestialBodies()
     local bodies = {}
     local planetFolder = Instance_new("Folder")
@@ -106,9 +106,12 @@ local function findCelestialBodies()
 
     -- Create celestial bodies in batches for better performance
     local celestialBodies = {
+        -- KSP1 Solar System
         "KERBOL", "MOHO", "EVE", "GILLY", "KERBIN", "MUN", "MINMUS",
         "DUNA", "IKE", "DRES", "JOOL", "LAYTHE", "VALL", "TYLO",
-        "BOP", "POL", "EELOO"
+        "BOP", "POL", "EELOO",
+        -- KSP2 Systems
+        "CIRO", "GARGANTUA", "GLUMO", "OVIN", "MAYOR", "REGENT"
     }
 
     -- Process bodies in batches of 4
@@ -119,15 +122,15 @@ local function findCelestialBodies()
             local bodyName = celestialBodies[j]
 
             local thread = coroutine.create(function()
+                print(string.format("[GameServer] Creating celestial body: %s", bodyName))
                 local planet = PlanetTemplateGenerator.createTemplate(bodyName)
-                planet.Name = bodyName
-                planet.Parent = planetFolder
-                bodies[bodyName] = planet
-
-                -- Create optimized gravity field
-                local gravityField = Instance_new("BodyForce")
-                gravityField.Name = "GravityField"
-                gravityField.Parent = planet
+                if planet then
+                    planet.Parent = planetFolder
+                    bodies[bodyName] = planet
+                    print(string.format("[GameServer] Successfully created %s", bodyName))
+                else
+                    warn(string.format("[GameServer] Failed to create %s", bodyName))
+                end
             end)
             table.insert(batch, thread)
         end
@@ -140,6 +143,10 @@ local function findCelestialBodies()
         -- Small delay between batches to prevent frame drops
         RunService.Heartbeat:Wait()
     end
+
+    -- Start orbits after all bodies are created
+    PlanetTemplateGenerator.startOrbits(bodies)
+    print("[GameServer] All celestial bodies created and orbits initialized")
 
     return bodies
 end
