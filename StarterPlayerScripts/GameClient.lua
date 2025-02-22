@@ -1,13 +1,23 @@
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SpacecraftSystem = require(game.ReplicatedStorage.Modules.SpacecraftSystem)
 local GameUI = require(game.StarterGui.GameUI)
 
+-- Get RemoteEvents
+local Events = {
+    UpdateThrottle = ReplicatedStorage:WaitForChild("UpdateThrottle"),
+    UpdateRotation = ReplicatedStorage:WaitForChild("UpdateRotation"),
+    ToggleSAS = ReplicatedStorage:WaitForChild("ToggleSAS"),
+    Stage = ReplicatedStorage:WaitForChild("Stage")
+}
+
 local GameClient = {}
 
 function GameClient:Initialize()
+    print("[GameClient] Initializing")
     self.ui = GameUI.new()
     self.throttle = 0
     self.spacecraft = nil
@@ -20,81 +30,114 @@ function GameClient:Initialize()
         rollRight = false,
         sasEnabled = false
     }
-    
+
     self:SetupInputHandling()
     self:SetupUpdateLoop()
+    print("[GameClient] Initialization complete")
 end
 
 function GameClient:SetupInputHandling()
+    print("[GameClient] Setting up input handling")
     -- Keyboard controls
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        
+
         if input.KeyCode == Enum.KeyCode.W then
+            print("[GameClient] W key pressed - Throttle up")
             self.controls.forward = true
+            self:UpdateThrottle(1)
         elseif input.KeyCode == Enum.KeyCode.S then
+            print("[GameClient] S key pressed - Throttle down")
             self.controls.backward = true
+            self:UpdateThrottle(-1)
         elseif input.KeyCode == Enum.KeyCode.A then
+            print("[GameClient] A key pressed - Yaw left")
             self.controls.left = true
+            self:UpdateRotation("left")
         elseif input.KeyCode == Enum.KeyCode.D then
+            print("[GameClient] D key pressed - Yaw right")
             self.controls.right = true
+            self:UpdateRotation("right")
         elseif input.KeyCode == Enum.KeyCode.Q then
+            print("[GameClient] Q key pressed - Roll left")
             self.controls.rollLeft = true
+            self:UpdateRotation("rollLeft")
         elseif input.KeyCode == Enum.KeyCode.E then
+            print("[GameClient] E key pressed - Roll right")
             self.controls.rollRight = true
+            self:UpdateRotation("rollRight")
         elseif input.KeyCode == Enum.KeyCode.T then
+            print("[GameClient] T key pressed - Toggle SAS")
             self.controls.sasEnabled = not self.controls.sasEnabled
+            Events.ToggleSAS:FireServer()
             self:UpdateSAS()
         elseif input.KeyCode == Enum.KeyCode.Space then
-            self:Stage()
+            print("[GameClient] Space key pressed - Stage")
+            Events.Stage:FireServer()
         end
     end)
-    
+
     UserInputService.InputEnded:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        
+
         if input.KeyCode == Enum.KeyCode.W then
+            print("[GameClient] W key released")
             self.controls.forward = false
+            self:UpdateThrottle(0)
         elseif input.KeyCode == Enum.KeyCode.S then
+            print("[GameClient] S key released")
             self.controls.backward = false
+            self:UpdateThrottle(0)
         elseif input.KeyCode == Enum.KeyCode.A then
+            print("[GameClient] A key released")
             self.controls.left = false
+            self:UpdateRotation("none")
         elseif input.KeyCode == Enum.KeyCode.D then
+            print("[GameClient] D key released")
             self.controls.right = false
+            self:UpdateRotation("none")
         elseif input.KeyCode == Enum.KeyCode.Q then
+            print("[GameClient] Q key released")
             self.controls.rollLeft = false
+            self:UpdateRotation("none")
         elseif input.KeyCode == Enum.KeyCode.E then
+            print("[GameClient] E key released")
             self.controls.rollRight = false
+            self:UpdateRotation("none")
         end
     end)
+end
+
+function GameClient:UpdateThrottle(direction)
+    if direction == 1 then
+        self.throttle = math.min(1, self.throttle + 0.1)
+    elseif direction == -1 then
+        self.throttle = math.max(0, self.throttle - 0.1)
+    else
+        self.throttle = 0
+    end
+    print("[GameClient] Updating throttle to:", self.throttle)
+    Events.UpdateThrottle:FireServer(self.throttle)
+end
+
+function GameClient:UpdateRotation(direction)
+    print("[GameClient] Sending rotation update:", direction)
+    Events.UpdateRotation:FireServer(direction)
 end
 
 function GameClient:SetupUpdateLoop()
     RunService.RenderStepped:Connect(function(dt)
-        if not self.spacecraft then return end
-        
-        -- Update throttle
-        if self.controls.forward then
-            self.throttle = math.min(1, self.throttle + dt)
-        elseif self.controls.backward then
-            self.throttle = math.max(0, self.throttle - dt)
-        end
-        
-        -- Apply thrust
-        local thrust = self.spacecraft:applyThrust(self.throttle)
-        
-        -- Update UI
         self:UpdateUI()
     end)
 end
 
 function GameClient:UpdateUI()
     if not self.spacecraft then return end
-    
+
     local primaryPart = self.spacecraft.parts[1]
     local altitude = (primaryPart.Position - Vector3.new(0, 0, 0)).Magnitude
     local velocity = primaryPart.Velocity.Magnitude
-    
+
     self.ui:updateAltitude(altitude)
     self.ui:updateVelocity(velocity)
     self.ui:updateFuel(self.spacecraft.fuel, self.spacecraft.maxFuel)
@@ -103,16 +146,8 @@ end
 
 function GameClient:UpdateSAS()
     if not self.spacecraft then return end
-    
-    -- Update SAS status
-    self.spacecraft.sasEnabled = self.controls.sasEnabled
+    print("[GameClient] Updating SAS status:", self.controls.sasEnabled)
     self.ui:updateSAS(self.controls.sasEnabled)
-end
-
-function GameClient:Stage()
-    if not self.spacecraft then return end
-    
-    self.spacecraft:stage()
 end
 
 return GameClient

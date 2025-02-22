@@ -1,0 +1,51 @@
+Here's a list of specific additional features to enhance your Roblox KSP-inspired game:
+
+Gameplay and Progression:
+
+Science System:
+Implement a basic science system where Kerbals can perform experiments (e.g., surface samples, temperature readings) on different celestial bodies.
+Award science points for successful experiments.
+Use science points to unlock new parts or technologies.
+Contracts:
+Introduce a contract system with objectives like reaching a specific altitude, orbiting a planet, or landing on a moon.
+Reward players with funds and science points for completing contracts.
+Kerbal Experience:
+Implement a system where Kerbals gain experience based on their missions.
+Experienced Kerbals could have improved skills (e.g., better piloting, more efficient repairs).
+Rescue Missions:
+Generate rescue missions where players need to rescue stranded Kerbals from orbit or other planets.
+Base Building (Limited):
+Allow players to place simple base structures (e.g., flags, small habitats) on planetary surfaces.
+Failure States:
+Implement failure states, such as engine failures, fuel leaks, or structural failures.
+Kerbals can repair certain failures during EVA.
+Technical and Visual Enhancements:
+
+Parallax Terrain:
+Add parallax terrain effects to planetary surfaces for a more realistic sense of depth.
+Particle Effects:
+Implement particle effects for engine exhaust, atmospheric entry, and explosions.
+Sound Effects:
+Add sound effects for engines, explosions, atmospheric sounds, and UI interactions.
+Camera Modes:
+Implement multiple camera modes, including chase camera, orbital camera, and IVA (Internal View Activity) for command pods.
+Time Warp:
+Implement a time warp feature to accelerate time during long orbital maneuvers.
+Re-entry Effects:
+Add heat effects, and visual effects to show the spacecraft heating up during re-entry.
+Staging Visuals:
+When a stage is activated, add visual effects to show the separation of the parts.
+Trajectory Prediction:
+Show a predicted trajectory line, that changes in real time, based on player input.
+Debug UI:
+When in developer mode, show a debug UI, that shows the current velocity, position, and other useful information.
+UI and Information:
+
+Delta-v Calculations:
+Display delta-v (change in velocity) information for the current stage and the entire spacecraft.
+Resource Management:
+Implement a detailed resource management UI showing fuel levels, electrical charge, and other resources.
+Maneuver Node System(simplified):
+Allow players to set maneuver nodes on their orbital path, to plan future burns.
+Planet Information UI:
+When the player clicks on a planet in the map view, display information about that planets gravity, atmosphere, and other useful data.

@@ -11,10 +11,10 @@ function SpacecraftSystem.new(commandPod)
         mass = 0,
         sasEnabled = false
     }
-    
+
     function spacecraft:addPart(part)
         table.insert(self.parts, part)
-        
+
         -- Update spacecraft properties
         if part.Name == "FuelTank" then
             self.maxFuel = self.maxFuel + PhysicsConstants.PARTS.FUEL_TANK.FUEL_CAPACITY
@@ -24,24 +24,53 @@ function SpacecraftSystem.new(commandPod)
             self.thrust = self.thrust + PhysicsConstants.PARTS.ENGINE.THRUST
             self.mass = self.mass + PhysicsConstants.PARTS.ENGINE.MASS
         end
-        
+
         -- Create weld constraint
         local weld = Instance.new("WeldConstraint")
         weld.Part0 = self.parts[1]
         weld.Part1 = part
         weld.Parent = part
     end
-    
+
     function spacecraft:applyThrust(throttle)
         if self.fuel <= 0 then return end
-        
+
         local thrustForce = self.thrust * throttle
         local fuelConsumption = thrustForce / (PhysicsConstants.PARTS.ENGINE.ISP * 9.81)
         self.fuel = math.max(0, self.fuel - fuelConsumption)
-        
-        return thrustForce
+
+        -- Apply thrust force in the direction the spacecraft is facing
+        local thrustDirection = self.parts[1].CFrame.LookVector
+        return thrustDirection * thrustForce
     end
-    
+
+    function spacecraft:applyRotation(direction)
+        local primaryPart = self.parts[1]
+        local torque = Instance.new("BodyAngularVelocity")
+        torque.Name = "RotationTorque"
+        torque.MaxTorque = Vector3.new(1000, 1000, 1000)
+
+        if direction == "left" then
+            torque.AngularVelocity = Vector3.new(0, 1, 0)
+        elseif direction == "right" then
+            torque.AngularVelocity = Vector3.new(0, -1, 0)
+        elseif direction == "rollLeft" then
+            torque.AngularVelocity = Vector3.new(0, 0, 1)
+        elseif direction == "rollRight" then
+            torque.AngularVelocity = Vector3.new(0, 0, -1)
+        else
+            torque.AngularVelocity = Vector3.new(0, 0, 0)
+        end
+
+        -- Remove any existing torque
+        local existingTorque = primaryPart:FindFirstChild("RotationTorque")
+        if existingTorque then
+            existingTorque:Destroy()
+        end
+
+        torque.Parent = primaryPart
+    end
+
     function spacecraft:stage()
         -- Implementation for staging system
         for i = #self.parts, 1, -1 do
@@ -65,10 +94,10 @@ function SpacecraftSystem.new(commandPod)
             end
         end
     end
-    
+
     -- Initialize with command pod
     spacecraft:addPart(commandPod)
-    
+
     return spacecraft
 end
 
