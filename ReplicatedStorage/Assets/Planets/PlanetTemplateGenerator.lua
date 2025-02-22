@@ -117,12 +117,34 @@ end
 local PlanetTemplateGenerator = {}
 
 function PlanetTemplateGenerator.createTemplate(bodyName)
-    logDebug(bodyName, "Creating planet template")
+    logDebug(bodyName, "Creating celestial body template")
 
-    -- Load pre-existing model from ReplicatedStorage.Assets.Planets
-    local template = ReplicatedStorage.Assets.Planets["PlanetTemplate_" .. bodyName]:Clone()
+    -- Determine template type and location
+    local templatePath = "PlanetTemplate_" .. bodyName
+    local templateFolder = "Planets"
+
+    -- Check body type and adjust path
+    if string.find(bodyName, "MUN") or string.find(bodyName, "MINMUS") or
+       string.find(bodyName, "LAYTHE") or string.find(bodyName, "VALL") or
+       string.find(bodyName, "TYLO") or string.find(bodyName, "BOP") or
+       string.find(bodyName, "POL") or string.find(bodyName, "IKE") then
+        templateFolder = "Moons"
+        templatePath = "Template_" .. bodyName:sub(1,1) .. bodyName:sub(2):lower()
+    elseif string.find(bodyName, "BELT") then
+        templateFolder = "AsteroidBelt"
+        templatePath = "Template_" .. bodyName
+    elseif string.find(bodyName, "ASTEROID") or string.find(bodyName, "COMET") then
+        templateFolder = "SpaceObjects"
+        templatePath = "Template_" .. bodyName
+    elseif string.find(bodyName, "DEBRIS") then
+        templateFolder = "SpaceDebris"
+        templatePath = "Template_" .. bodyName
+    end
+
+    -- Load pre-existing model from appropriate folder
+    local template = ReplicatedStorage.Assets[templateFolder][templatePath]:Clone()
     if not template then
-        warn(string.format("[PlanetTemplateGenerator] Could not find template for %s", bodyName))
+        warn(string.format("[PlanetTemplateGenerator] Could not find template for %s in %s", bodyName, templateFolder))
         return nil
     end
     template.Name = bodyName
@@ -192,6 +214,22 @@ function PlanetTemplateGenerator.createTemplate(bodyName)
 
     logDebug(bodyName, "Template creation complete")
     return template
+end
+
+-- Add new functions for space object generation
+function PlanetTemplateGenerator.createRandomAsteroid(size)
+    local asteroidTemplate = require(ReplicatedStorage.Assets.SpaceObjects.Template_RandomAsteroid)
+    return asteroidTemplate.createAsteroid(size or math.random(10, 30))
+end
+
+function PlanetTemplateGenerator.createComet(size, tailLength)
+    local cometTemplate = require(ReplicatedStorage.Assets.SpaceObjects.Template_Comet)
+    return cometTemplate.createComet(size or math.random(20, 40), tailLength or math.random(100, 200))
+end
+
+function PlanetTemplateGenerator.createSpaceJunk(junkType)
+    local junkTemplate = require(ReplicatedStorage.Assets.SpaceDebris.Template_SpaceJunk)
+    return junkTemplate.createSpaceJunk(junkType or "debris")
 end
 
 -- Start orbiting all moons around their parent bodies

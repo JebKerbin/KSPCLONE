@@ -1,0 +1,53 @@
+Here's the **Replit Agent Prompt** without the Debdeb system but still including the ringed planets from KSP 1 & 2.  
+
+---
+
+### **🛠 Replit Agent Prompt: Adding Rings & Fixing Planet Generation in Roblox KSP Clone**
+**Objective:**  
+Modify my existing Roblox KSP-style game to ensure that:  
+✅ **Planets & moons use `ReplicatedStorage.Assets.PlanetTemplate` for generation**  
+✅ **Planets that need rings (Jool, Ovin, Dres) have accurate rings**  
+✅ **Planetary models are built using eight quarter-circle MeshParts**  
+✅ **Properly scales planets, orbits, and rings**  
+✅ **Rings use circular MeshParts with transparent glowing material**  
+
+---
+
+### **📌 Planetary Structure**
+- **Each planet and moon** should be **built from `PlanetTemplate_*`** located in `ReplicatedStorage.Assets.PlanetTemplate`.  
+- **Planets & moons use eight quarter-circle MeshParts** to form a sphere.  
+- **Ringed planets** will have a separate MeshPart acting as the ring system.  
+
+---
+
+### **🌍 Existing KSP Planets That Need Rings**
+- **Jool** – Faint rings, wide structure.  
+- **Ovin** – Bright, dense rings.  
+- **Dres** – Sparse asteroid-belt-like rings.  
+
+---
+
+### **🌌 Orbit Scaling & Realism**
+- Planetary orbits should be **scaled proportionally** to match **Kerbal Space Program distances.**  
+- **Orbital periods should be realistic** while ensuring fun gameplay.  
+
+---
+
+### **🔆 Lighting Adjustments**
+- **Ring systems should have a faint glow.**  
+- **Planets & moons should reflect proper star lighting based on distance.**  
+
+---
+
+### **🚀 Execution Plan**
+1. Modify `SolarSystemBuilder` to:  
+   - Ensure **each celestial body is generated from the correct template.**  
+   - **Sort planets into `Assets.Planets` & moons into `Assets.Moons`.**  
+   - **Spawn planets with correct positions & scale.**  
+   - **Attach rings to Jool, Ovin, and Dres using circular MeshParts.**  
+2. **Verify planets are spawning in correct orbits.**  
+3. **Optimize performance** by reducing unnecessary physics calculations.  
+
+---
+
+**🛠 Ready for Implementation. Let’s generate the ringed planets correctly!** 🚀
