@@ -14,14 +14,12 @@ local Events = {
     Stage = ReplicatedStorage:WaitForChild("Stage")
 }
 
-local GameClient = {}
-
-function GameClient:Initialize()
-    print("[GameClient] Initializing")
-    self.ui = GameUI.new()
-    self.throttle = 0
-    self.spacecraft = nil
-    self.controls = {
+local _GameClient = {
+    ui = nil,
+    throttle = 0,
+    spacecraft = nil,
+    celestialBodies = nil,
+    controls = {
         forward = false,
         backward = false,
         left = false,
@@ -30,13 +28,19 @@ function GameClient:Initialize()
         rollRight = false,
         sasEnabled = false
     }
+}
+
+function _GameClient:Initialize()
+    print("[GameClient] Initializing")
+    self.ui = GameUI.new()
+    self.celestialBodies = workspace:WaitForChild("CelestialBodies") -- Get the folder containing all planets
 
     self:SetupInputHandling()
     self:SetupUpdateLoop()
     print("[GameClient] Initialization complete")
 end
 
-function GameClient:SetupInputHandling()
+function _GameClient:SetupInputHandling()
     print("[GameClient] Setting up input handling")
     -- Keyboard controls
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -108,7 +112,7 @@ function GameClient:SetupInputHandling()
     end)
 end
 
-function GameClient:UpdateThrottle(direction)
+function _GameClient:UpdateThrottle(direction)
     if direction == 1 then
         self.throttle = math.min(1, self.throttle + 0.1)
     elseif direction == -1 then
@@ -120,34 +124,44 @@ function GameClient:UpdateThrottle(direction)
     Events.UpdateThrottle:FireServer(self.throttle)
 end
 
-function GameClient:UpdateRotation(direction)
+function _GameClient:UpdateRotation(direction)
     print("[GameClient] Sending rotation update:", direction)
     Events.UpdateRotation:FireServer(direction)
 end
 
-function GameClient:SetupUpdateLoop()
+function _GameClient:SetupUpdateLoop()
     RunService.RenderStepped:Connect(function(dt)
         self:UpdateUI()
     end)
 end
 
-function GameClient:UpdateUI()
+function _GameClient:UpdateUI()
     if not self.spacecraft then return end
 
     local primaryPart = self.spacecraft.parts[1]
-    local altitude = (primaryPart.Position - Vector3.new(0, 0, 0)).Magnitude
+    local altitude = (primaryPart.Position - workspace.Kerbin.PrimaryPart.Position).Magnitude
     local velocity = primaryPart.Velocity.Magnitude
 
     self.ui:updateAltitude(altitude)
     self.ui:updateVelocity(velocity)
     self.ui:updateFuel(self.spacecraft.fuel, self.spacecraft.maxFuel)
     self.ui:updateSAS(self.controls.sasEnabled)
+
+    -- Update debug information
+    local celestialBodies = {}
+    for _, body in ipairs(self.celestialBodies:GetChildren()) do
+        if body:IsA("Model") and body.PrimaryPart then
+            celestialBodies[body.Name] = body
+        end
+    end
+    self.ui:updateDebug(self.spacecraft, celestialBodies)
 end
 
-function GameClient:UpdateSAS()
+function _GameClient:UpdateSAS()
     if not self.spacecraft then return end
     print("[GameClient] Updating SAS status:", self.controls.sasEnabled)
     self.ui:updateSAS(self.controls.sasEnabled)
 end
 
-return GameClient
+-- Initialize the game client immediately
+_GameClient:Initialize()

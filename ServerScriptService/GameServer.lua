@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OrbitalMechanics = require(game.ReplicatedStorage.Modules.OrbitalMechanics)
 local PhysicsConstants = require(game.ReplicatedStorage.Modules.PhysicsConstants)
 local SpacecraftSystem = require(game.ReplicatedStorage.Modules.SpacecraftSystem)
+local PlanetTemplateGenerator = require(game.ReplicatedStorage.Assets.Planets.PlanetTemplateGenerator)
 
 -- Create RemoteEvents for spacecraft control
 local Events = {
@@ -19,61 +20,58 @@ for name, event in pairs(Events) do
     event.Parent = ReplicatedStorage
 end
 
-local GameServer = {}
+local _GameServer = {
+    celestialBodies = {},
+    activeSpacecraft = {}
+}
 
--- Find celestial bodies in ReplicatedStorage
+-- Update findCelestialBodies to handle all planets and moons
 local function findCelestialBodies()
-    local bodies = {
-        Kerbin = nil,
-        Mun = nil,
-        Minmus = nil
+    local bodies = {}
+    local planetFolder = Instance.new("Folder")
+    planetFolder.Name = "CelestialBodies"
+    planetFolder.Parent = workspace
+
+    -- List of all celestial bodies to create
+    local celestialBodies = {
+        "KERBOL", "MOHO", "EVE", "GILLY", "KERBIN", "MUN", "MINMUS",
+        "DUNA", "IKE", "DRES", "JOOL", "LAYTHE", "VALL", "TYLO",
+        "BOP", "POL", "EELOO", "OVIN", "GARGANTUA", "GLUMO"
     }
 
-    local planetsFolder = ReplicatedStorage:WaitForChild("Assets"):WaitForChild("Planets")
-    print("[GameServer] Looking for planet templates in:", planetsFolder:GetFullName())
+    print("[GameServer] Starting celestial body creation")
 
-    for name in pairs(bodies) do
-        local template = planetsFolder:FindFirstChild("PlanetTemplate_" .. name)
-        if template then
-            -- Clone the template to workspace
-            local planet = template:Clone()
-            planet.Name = name
-            planet.Parent = game.Workspace
-            bodies[name] = planet
-            print("[GameServer] Found and cloned planet:", name)
-        else
-            warn("[GameServer] Could not find template for planet:", name)
-        end
+    for _, bodyName in ipairs(celestialBodies) do
+        print("[GameServer] Creating", bodyName)
+        local planet = PlanetTemplateGenerator.createTemplate(bodyName)
+        planet.Name = bodyName
+        planet.Parent = planetFolder
+        bodies[bodyName] = planet
+
+        -- Create gravitational field
+        local gravityField = Instance.new("BodyForce")
+        gravityField.Name = "GravityField"
+        gravityField.Parent = planet
+
+        print(string.format("[GameServer] Created %s at position: %s", 
+            bodyName, tostring(planet.PrimaryPart.Position)))
     end
 
     return bodies
 end
 
-function GameServer:Initialize()
+function _GameServer:Initialize()
+    print("[GameServer] Starting initialization...")
     self.celestialBodies = findCelestialBodies()
-    self.activeSpacecraft = {}
-    print("[GameServer] Initialized")
-
-    -- Set up physics properties for celestial bodies
-    for name, body in pairs(self.celestialBodies) do
-        local mass = PhysicsConstants[name].MASS
-        body.Anchored = true
-        print("[GameServer] Set up physics for:", name)
-
-        -- Create gravitational field
-        local gravityField = Instance.new("BodyForce")
-        gravityField.Name = "GravityField"
-        gravityField.Parent = body
-    end
 
     -- Create test spacecraft
     local commandPod = Instance.new("Part")
     commandPod.Name = "CommandPod"
-    commandPod.Position = Vector3.new(0, 100, 0) -- Start 100 studs above origin
+    commandPod.Position = Vector3.new(0, PhysicsConstants.KERBIN.RADIUS + 100, 0) -- Start 100 studs above Kerbin
     commandPod.Size = Vector3.new(2, 3, 2)
     commandPod.Anchored = false
     commandPod.Parent = game.Workspace
-    print("[GameServer] Created test command pod")
+    print("[GameServer] Created test command pod at height:", commandPod.Position.Y)
 
     -- Set up event handlers
     Events.UpdateThrottle.OnServerEvent:Connect(function(player, throttle)
@@ -112,27 +110,30 @@ function GameServer:Initialize()
     RunService.Heartbeat:Connect(function(dt)
         self:UpdatePhysics(dt)
     end)
+
+    print("[GameServer] Initialization complete")
 end
 
-function GameServer:GetPlayerSpacecraft(player)
-    -- Return the spacecraft associated with the player
+function _GameServer:GetPlayerSpacecraft(player)
     return self.activeSpacecraft[player.UserId]
 end
 
-function GameServer:UpdatePhysics(dt)
+function _GameServer:UpdatePhysics(dt)
     -- Update each spacecraft
     for _, spacecraft in pairs(self.activeSpacecraft) do
         -- Calculate gravitational forces from each celestial body
         local totalForce = Vector3.new(0, 0, 0)
 
         for name, body in pairs(self.celestialBodies) do
-            local force = OrbitalMechanics.calculateGravitationalForce(
-                PhysicsConstants[name].MASS,
-                spacecraft.mass,
-                body.Position,
-                spacecraft.parts[1].Position
-            )
-            totalForce = totalForce + force
+            if body then
+                local force = OrbitalMechanics.calculateGravitationalForce(
+                    PhysicsConstants[name].MASS,
+                    spacecraft.mass,
+                    body.PrimaryPart.Position,
+                    spacecraft.parts[1].Position
+                )
+                totalForce = totalForce + force
+            end
         end
 
         -- Apply forces to spacecraft
@@ -143,7 +144,7 @@ function GameServer:UpdatePhysics(dt)
     end
 end
 
-function GameServer:RegisterSpacecraft(spacecraft, player)
+function _GameServer:RegisterSpacecraft(spacecraft, player)
     print("[GameServer] Registering spacecraft for player:", player.Name)
     self.activeSpacecraft[player.UserId] = spacecraft
 
@@ -153,4 +154,5 @@ function GameServer:RegisterSpacecraft(spacecraft, player)
     engineForce.Parent = spacecraft.parts[1]
 end
 
-return GameServer
+-- Initialize the game server immediately
+_GameServer:Initialize()

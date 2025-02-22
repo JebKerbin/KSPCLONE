@@ -28,7 +28,6 @@ task = "packager.installForAll"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "roblox-studio game.rbxl"
-waitForPort = 53640
 
 [deployment]
 run = ["sh", "-c", "roblox-studio game.rbxl"]
