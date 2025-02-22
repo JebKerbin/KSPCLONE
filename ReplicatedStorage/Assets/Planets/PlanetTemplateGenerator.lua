@@ -39,16 +39,16 @@ function PlanetTemplateGenerator.createTemplate(bodyName)
         return nil
     end
 
-    -- Load pre-built model from ServerStorage
-    local templateName = "PlanetTemplate_" .. bodyName:sub(1,1) .. bodyName:sub(2):lower()
+    -- Determine template folder based on whether it's a moon or planet
     local templateFolder = PhysicsConstants[bodyName].PARENT and "Moons" or "Planets"
-    local template = game:GetService("ServerStorage")
-        :WaitForChild("CelestialTemplates")
-        :WaitForChild(templateFolder)
-        :WaitForChild(templateName)
+    local templateName = "PlanetTemplate_" .. bodyName:sub(1,1) .. bodyName:sub(2):lower()
+
+    -- Try to load pre-built model from appropriate folder
+    local celestialTemplates = game:GetService("ServerStorage"):WaitForChild("CelestialTemplates")
+    local template = celestialTemplates:WaitForChild(templateFolder):WaitForChild(templateName)
 
     if not template then
-        warn(string.format("[PlanetTemplateGenerator] Could not find template for %s", bodyName))
+        warn(string.format("[PlanetTemplateGenerator] Could not find template for %s in %s folder", bodyName, templateFolder))
         return nil
     end
 
